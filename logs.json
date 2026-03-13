@@ -1,0 +1,34 @@
+[
+    {
+        "time": "2026-03-13 20:26:50",
+        "device": "Test-PC",
+        "ip": "127.0.0.1",
+        "file": "report.pdf",
+        "action": "file read",
+        "severity": "NORMAL"
+    },
+    {
+        "time": "2026-03-13 20:25:53",
+        "device": "Test-PC",
+        "ip": "127.0.0.1",
+        "file": "config.sys",
+        "action": "login failed",
+        "severity": "MEDIUM"
+    },
+    {
+        "time": "2026-03-13 20:21:54",
+        "device": "Intruder",
+        "ip": "127.0.0.1",
+        "file": "virus.exe",
+        "action": "breach",
+        "severity": "HIGH"
+    },
+    {
+        "time": "2026-03-13 20:19:36",
+        "device": "Intruder",
+        "ip": "127.0.0.1",
+        "file": "virus.exe",
+        "action": "breach",
+        "severity": "HIGH"
+    }
+]

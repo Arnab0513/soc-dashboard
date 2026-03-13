@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Security Monitoring Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+<body>
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🛡</div>
+      <div class="logo-text">
+        <h1>SOC DASHBOARD</h1>
+        <p>REAL-TIME SECURITY MONITORING</p>
+      </div>
+    </div>
+    <div class="live-badge" id="liveBadge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="liveStatus">CONNECTING...</span>
+    </div>
+  </header>
+
+  <!-- ── MAIN ── -->
+  <main>
+
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-label">Total Alerts</div>
+        <div class="stat-value" id="statTotal">{{ logs | length }}</div>
+        <div class="stat-icon">📊</div>
+      </div>
+      <div class="stat-card high">
+        <div class="stat-label">High Severity</div>
+        <div class="stat-value" id="statHigh">
+          {{ logs | selectattr("severity","equalto","HIGH") | list | length }}
+        </div>
+        <div class="stat-icon">🔴</div>
+      </div>
+      <div class="stat-card medium">
+        <div class="stat-label">Medium Severity</div>
+        <div class="stat-value" id="statMedium">
+          {{ logs | selectattr("severity","equalto","MEDIUM") | list | length }}
+        </div>
+        <div class="stat-icon">🟡</div>
+      </div>
+      <div class="stat-card normal">
+        <div class="stat-label">Normal Events</div>
+        <div class="stat-value" id="statNormal">
+          {{ logs | selectattr("severity","equalto","NORMAL") | list | length }}
+        </div>
+        <div class="stat-icon">🟢</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('logs', this)">⬡ LOGS</button>
+      <button class="tab-btn" onclick="switchTab('analytics', this)">◈ ANALYTICS</button>
+      <button class="tab-btn" onclick="switchTab('blocked', this)">⊘ BLOCKED IPs</button>
+    </div>
+
+    <!-- Panel wrapper -->
+    <div class="content-panel">
+
+      <!-- LOGS TAB -->
+      <div class="tab-content active" id="tab-logs">
+        <div class="panel-header">
+          <span class="panel-title">// Security Event Log</span>
+          <div class="panel-actions">
+            <input
+              class="search-box"
+              id="searchInput"
+              type="text"
+              placeholder="Search logs..."
+              oninput="filterTable()"
+            />
+            <select class="filter-select" id="severityFilter" onchange="filterTable()">
+              <option value="">All Severities</option>
+              <option value="HIGH">HIGH</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="NORMAL">NORMAL</option>
+            </select>
+            <button class="btn btn-danger" onclick="clearLogs()">✕ Clear</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Device</th>
+                <th>IP Address</th>
+                <th>File</th>
+                <th>Action</th>
+                <th>Severity</th>
+              </tr>
+            </thead>
+            <tbody id="logBody">
+              {% for log in logs %}
+              <tr class="{{ log.severity }}">
+                <td class="time-cell">{{ log.time }}</td>
+                <td>{{ log.device }}</td>
+                <td class="ip-cell">{{ log.ip }}</td>
+                <td class="file-cell">{{ log.file }}</td>
+                <td class="action-cell">{{ log.action }}</td>
+                <td><span class="sev-badge sev-{{ log.severity }}">{{ log.severity }}</span></td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="empty-state">No security events recorded.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ANALYTICS TAB -->
+      <div class="tab-content" id="tab-analytics">
+        <div class="panel-header">
+          <span class="panel-title">// Security Analytics</span>
+          <button class="btn" onclick="refreshCharts()">↺ Refresh</button>
+        </div>
+        <div class="analytics-grid">
+          <div class="chart-card">
+            <div class="chart-title">Alert Severity Distribution</div>
+            <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Severity Breakdown</div>
+            <div class="chart-wrap"><canvas id="doughnutChart"></canvas></div>
+          </div>
+          <div class="chart-card span-full">
+            <div class="chart-title">Events Over Time (by hour)</div>
+            <div class="chart-wrap chart-wrap-sm"><canvas id="lineChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCKED IPs TAB -->
+      <div class="tab-content" id="tab-blocked">
+        <div class="panel-header">
+          <span class="panel-title">// Blocked IP Addresses</span>
+        </div>
+        <div class="blocked-list" id="blockedList">
+          <span class="empty-text">No IPs blocked in this session.</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

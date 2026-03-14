@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 # ── Email Config ──────────────────────────────────────────────
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER", "arnabjana536@gmail.com")
+EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER", "arnabjana078@gmail.com")
 EMAIL_ENABLED  = os.environ.get("EMAIL_ENABLED",  "true").lower() == "true"
 
 # ── Block by device name ──────────────────────────────────────
@@ -58,7 +58,7 @@ def send_email_alert(severity, device, ip, file_name, action):
         print("[EMAIL] Skipped - RESEND_API_KEY is empty")
         return
 
-    now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).astimezone(datetime.timezone(datetime.timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S IST")
 
     if severity == "HIGH":
         color = "#ff3b3b"

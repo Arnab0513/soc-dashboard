@@ -12,6 +12,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
+import pytz
+IST = pytz.timezone("Asia/Kolkata")
 from gevent import sleep as gevent_sleep
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context # type: ignore
@@ -165,7 +167,7 @@ def classify_severity(device, ip, action):
 
 def write_log(device, ip, file, action, severity):
     entry = {
-        "time":     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "time": datetime.datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
         "device":   device,
         "ip":       ip,
         "file":     file,

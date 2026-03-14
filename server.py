@@ -3,7 +3,6 @@ server.py — Real-Time Security Monitoring & Intrusion Detection
 Run:  python server.py
 URL:  http://127.0.0.1:5050
 """
-
 import datetime
 import json
 import time
@@ -60,6 +59,8 @@ def send_email_alert(severity, device, ip, file, action):
     now   = datetime.datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
     color = "#ff3b3b" if severity == "HIGH" else "#ffb020"
     icon  = "🔴" if severity == "HIGH" else "🟡"
+    footer = f"Intrusion detected! Device {device} has been blocked." if severity == "HIGH" else "Suspicious activity detected from an authorized device."
+    subj   = f"[{severity}] Security Alert - {device} | {file}"
 
     html = f"""
     <html><body style="margin:0;padding:0;background:#0a0d13;font-family:'Courier New',monospace;">
@@ -94,7 +95,7 @@ def send_email_alert(severity, device, ip, file, action):
           </table>
           <div style="margin-top:20px;padding:14px;border-left:4px solid {color};border-radius:4px;">
             <p style="margin:0;color:{color};font-size:13px;">
-              {'Intrusion detected! Device ' + device + ' has been blocked.' if severity == 'HIGH' else 'Suspicious activity detected from an authorized device.'}
+              {footer}
             </p>
           </div>
         </div>
@@ -115,7 +116,7 @@ def send_email_alert(severity, device, ip, file, action):
             json={
                 "from":    "SOC Alert <onboarding@resend.dev>",
                 "to":      [EMAIL_RECEIVER],
-                "subject": f"[{severity}] Security Alert - {device} | {file}",
+                "subject": subj,
                 "html":    html
             },
             timeout=10

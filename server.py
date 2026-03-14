@@ -25,9 +25,8 @@ app = Flask(__name__)
 #                       (do NOT put real passwords on GitHub)
 # ══════════════════════════════════════════════════════════════
 
-# ── Email ─────────────────────────────────────────────────────
-EMAIL_SENDER   = os.environ.get("EMAIL_SENDER",   "arnabjana0782gmail.com")
-EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "zudecpsyvhheiven")
+# ── Email ───────────────────────────────────────────────────
+EMAIL_PASSWORD = os.environ.get("RESEND_API_KEY ", "re_gQttV7cc_LhpeLYn5yqyaSo9xBta3FPkB")
 EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER", "arnabjana536@gmail.com")
 EMAIL_ENABLED  = os.environ.get("EMAIL_ENABLED",  "false").lower() == "true"
 

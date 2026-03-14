@@ -12,6 +12,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
+from gevent import sleep as gevent_sleep
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context # type: ignore
 
@@ -289,7 +290,7 @@ def stream():
             while True:
                 if q:
                     yield f"data: {json.dumps(q.pop(0))}\n\n"
-                time.sleep(0.1)
+                gevent_sleep(0.1)
         finally:
             if q in clients:
                 clients.remove(q)

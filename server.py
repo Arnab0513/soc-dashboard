@@ -64,7 +64,7 @@ def load_authorized_devices() -> dict:
 
 def send_email_alert(severity, device, ip, file, action):
     if not EMAIL_ENABLED:
-        return
+        return 
     now   = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     color = "#ff3b3b" if severity == "HIGH" else "#ffb020"
     icon  = "🔴" if severity == "HIGH" else "🟡"
@@ -140,8 +140,7 @@ Action : {action}
         print("[EMAIL] ❌ Authentication failed — check App Password")
     except Exception as e:
         print(f"[EMAIL] ❌ Error: {e}")
-
-
+ 
 # ── Send via all enabled methods ──────────────────────────────
 
 def send_alert(severity, device, ip, file, action):

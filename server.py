@@ -8,25 +8,25 @@ import datetime
 import json
 import time
 import os
-import requests
 import pytz
-IST = pytz.timezone("Asia/Kolkata")
-from gevent import sleep as gevent_sleep
+import requests
 
-from flask import Flask, Response, jsonify, render_template, request, stream_with_context # type: ignore
+from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 
 app = Flask(__name__)
 
-# ── Email ─────────────────────────────────────────────────────
+# ── Timezone ──────────────────────────────────────────────────
+IST = pytz.timezone("Asia/Kolkata")
+
+# ── Resend Email Config ───────────────────────────────────────
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "re_gQttV7cc_LhpeLYn5yqyaSo9xBta3FPkB")
 EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER", "arnabjana078@gmail.com")
 EMAIL_ENABLED  = os.environ.get("EMAIL_ENABLED",  "true").lower() == "true"
 
-# ══════════════════════════════════════════════════════════════
-
 # ── Block by device name ──────────────────────────────────────
 blocked_devices: set = set()
 clients: list = []
+
 
 # ── File helpers ──────────────────────────────────────────────
 
@@ -50,61 +50,51 @@ def load_authorized_devices() -> dict:
     except Exception:
         return {}
 
-# ── Email alert ───────────────────────────────────────────────
+
+# ── Email alert via Resend HTTP API ───────────────────────────
 
 def send_email_alert(severity, device, ip, file, action):
-    if not EMAIL_ENABLED:
-        return 
-    now   = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if not EMAIL_ENABLED or not RESEND_API_KEY:
+        return
+
+    now   = datetime.datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
     color = "#ff3b3b" if severity == "HIGH" else "#ffb020"
     icon  = "🔴" if severity == "HIGH" else "🟡"
-
-    plain = f"""
-SECURITY ALERT — {severity}
-============================
-Time   : {now}
-Device : {device}
-IP     : {ip}
-File   : {file}
-Action : {action}
-============================
-{'INTRUSION DETECTED — Device has been blocked.' if severity == 'HIGH' else 'Suspicious activity from authorized device.'}
-    """.strip()
 
     html = f"""
     <html><body style="margin:0;padding:0;background:#0a0d13;font-family:'Courier New',monospace;">
       <div style="max-width:560px;margin:30px auto;background:#111820;border:1px solid #1e2d3d;border-radius:12px;overflow:hidden;">
         <div style="background:{color};padding:18px 24px;">
           <h2 style="margin:0;color:#fff;font-size:18px;letter-spacing:2px;">
-            {icon} SECURITY ALERT — {severity}
+            {icon} SECURITY ALERT &mdash; {severity}
           </h2>
         </div>
         <div style="padding:24px;">
           <table style="width:100%;border-collapse:collapse;color:#c9d1d9;font-size:14px;">
             <tr style="border-bottom:1px solid #1e2d3d;">
-              <td style="padding:10px 0;color:#4a6070;width:90px;">📅 TIME</td>
+              <td style="padding:10px 0;color:#4a6070;width:90px;">TIME</td>
               <td style="padding:10px 0;color:#fff;">{now}</td>
             </tr>
             <tr style="border-bottom:1px solid #1e2d3d;">
-              <td style="padding:10px 0;color:#4a6070;">💻 DEVICE</td>
+              <td style="padding:10px 0;color:#4a6070;">DEVICE</td>
               <td style="padding:10px 0;color:{color};font-weight:bold;">{device}</td>
             </tr>
             <tr style="border-bottom:1px solid #1e2d3d;">
-              <td style="padding:10px 0;color:#4a6070;">🌐 IP</td>
+              <td style="padding:10px 0;color:#4a6070;">IP</td>
               <td style="padding:10px 0;color:#00d4ff;">{ip}</td>
             </tr>
             <tr style="border-bottom:1px solid #1e2d3d;">
-              <td style="padding:10px 0;color:#4a6070;">📄 FILE</td>
+              <td style="padding:10px 0;color:#4a6070;">FILE</td>
               <td style="padding:10px 0;color:#e8b86d;">{file}</td>
             </tr>
             <tr>
-              <td style="padding:10px 0;color:#4a6070;">⚡ ACTION</td>
+              <td style="padding:10px 0;color:#4a6070;">ACTION</td>
               <td style="padding:10px 0;color:#c9d1d9;">{action}</td>
             </tr>
           </table>
-          <div style="margin-top:20px;padding:14px;background:rgba({'255,59,59' if severity=='HIGH' else '255,176,32'},.1);border-left:4px solid {color};border-radius:4px;">
+          <div style="margin-top:20px;padding:14px;border-left:4px solid {color};border-radius:4px;">
             <p style="margin:0;color:{color};font-size:13px;">
-              {'🚨 Intrusion detected! Device <b>' + device + '</b> has been blocked.' if severity == 'HIGH' else '⚠️ Suspicious activity detected from an authorized device.'}
+              {'Intrusion detected! Device ' + device + ' has been blocked.' if severity == 'HIGH' else 'Suspicious activity detected from an authorized device.'}
             </p>
           </div>
         </div>
@@ -116,25 +106,26 @@ Action : {action}
     """
 
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"[{severity}] Security Alert — {device} | {file}"
-        msg["From"]    = "SOC Alert <onboarding@resend.dev>"
-        msg["To"]      = EMAIL_RECEIVER
-        msg.attach(MIMEText(plain, "plain"))
-        msg.attach(MIMEText(html,  "html"))
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login("SOC Alert <onboarding@resend.dev>"_DUMMY)
-            server.sendmail("SOC Alert <onboarding@resend.dev>", EMAIL_RECEIVER, msg.as_string())
-        print(f"[EMAIL] ✅ Alert sent to {EMAIL_RECEIVER}")
-    except smtplib.SMTPAuthenticationError:
-        print("[EMAIL] ❌ Authentication failed — check App Password")
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from":    "SOC Alert <onboarding@resend.dev>",
+                "to":      [EMAIL_RECEIVER],
+                "subject": f"[{severity}] Security Alert - {device} | {file}",
+                "html":    html
+            },
+            timeout=10
+        )
+        if response.status_code == 200:
+            print(f"[EMAIL] ✅ Alert sent to {EMAIL_RECEIVER}")
+        else:
+            print(f"[EMAIL] ❌ Failed: {response.text}")
     except Exception as e:
         print(f"[EMAIL] ❌ Error: {e}")
- 
-# ── Send via all enabled methods ──────────────────────────────
-
-def send_alert(severity, device, ip, file, action):
-    send_email_alert(severity, device, ip, file, action)
 
 
 # ── Business logic ────────────────────────────────────────────
@@ -154,7 +145,7 @@ def classify_severity(device, ip, action):
 
 def write_log(device, ip, file, action, severity):
     entry = {
-        "time": datetime.datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
+        "time":     datetime.datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
         "device":   device,
         "ip":       ip,
         "file":     file,
@@ -185,7 +176,7 @@ def handle_intrusion(device, ip, file, action):
     print("=" * 48)
     block_device(device)
     protect_file(file)
-    send_alert("HIGH", device, ip, file, action)
+    send_email_alert("HIGH", device, ip, file, action)
 
 
 # ── Routes ────────────────────────────────────────────────────
@@ -242,7 +233,7 @@ def receive_log():
         if severity == "HIGH":
             handle_intrusion(device, ip, data["file"], data["action"])
         elif severity == "MEDIUM":
-            send_alert("MEDIUM", device, ip, data["file"], data["action"])
+            send_email_alert("MEDIUM", device, ip, data["file"], data["action"])
 
         print(f"[LOG] {severity:6s} | {device} | {data['file']} | {data['action']}")
         return jsonify({"status": "ok", "severity": severity})
@@ -272,6 +263,7 @@ def clear_logs():
 
 @app.route("/stream")
 def stream():
+    from gevent import sleep as gevent_sleep
     def event_stream():
         q = []
         clients.append(q)
@@ -291,8 +283,6 @@ def stream():
     )
 
 
-# ── Entry point ───────────────────────────────────────────────
-# Use gunicorn on Render, flask dev server locally
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

@@ -7,6 +7,9 @@ import json
 import time
 import os
 import requests
+import urllib.request
+import urllib.error
+import ssl
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 
@@ -14,7 +17,7 @@ app = Flask(__name__)
 
 # ── Email Config ──────────────────────────────────────────────
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER", "arnabjana078@gmail.com")
+EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER", "arnabjana536@gmail.com")
 EMAIL_ENABLED  = os.environ.get("EMAIL_ENABLED",  "true").lower() == "true"
 
 # ── Block by device name ──────────────────────────────────────
@@ -49,10 +52,10 @@ def load_authorized_devices():
 
 def send_email_alert(severity, device, ip, file_name, action):
     if not EMAIL_ENABLED:
-        print("[EMAIL] Skipped — EMAIL_ENABLED is false")
+        print("[EMAIL] Skipped - EMAIL_ENABLED is false")
         return
     if not RESEND_API_KEY:
-        print("[EMAIL] Skipped — RESEND_API_KEY is empty")
+        print("[EMAIL] Skipped - RESEND_API_KEY is empty")
         return
 
     now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -90,27 +93,30 @@ def send_email_alert(severity, device, ip, file_name, action):
         "</div></div></body></html>"
     )
 
-    payload = {
+    payload = json.dumps({
         "from":    "SOC Alert <onboarding@resend.dev>",
         "to":      [EMAIL_RECEIVER],
         "subject": subject,
         "html":    html_body
-    }
+    }).encode("utf-8")
 
     try:
-        resp = requests.post(
+        # Use urllib instead of requests to avoid gevent recursion conflict
+        ctx = ssl.create_default_context()
+        req = urllib.request.Request(
             "https://api.resend.com/emails",
+            data=payload,
             headers={
                 "Authorization": "Bearer " + RESEND_API_KEY,
-                "Content-Type": "application/json"
+                "Content-Type":  "application/json"
             },
-            json=payload,
-            timeout=10
+            method="POST"
         )
-        if resp.status_code == 200:
-            print("[EMAIL] Alert sent to " + EMAIL_RECEIVER)
-        else:
-            print("[EMAIL] Failed: " + resp.text)
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+            if resp.status == 200:
+                print("[EMAIL] Alert sent to " + EMAIL_RECEIVER)
+            else:
+                print("[EMAIL] Failed with status " + str(resp.status))
     except Exception as e:
         print("[EMAIL] Error: " + str(e))
 

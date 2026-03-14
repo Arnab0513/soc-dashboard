@@ -8,9 +8,6 @@ import datetime
 import json
 import time
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import requests
 import pytz
 IST = pytz.timezone("Asia/Kolkata")
@@ -20,14 +17,6 @@ from flask import Flask, Response, jsonify, render_template, request, stream_wit
 
 app = Flask(__name__)
 
-
-# ══════════════════════════════════════════════════════════════
-#  NOTIFICATION CONFIG
-#  For LOCAL testing  → fill values directly below
-#  For RENDER deploy  → set these in Render Environment tab
-#                       (do NOT put real passwords on GitHub)
-# ══════════════════════════════════════════════════════════════
-
 # ── Email ─────────────────────────────────────────────────────
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "re_gQttV7cc_LhpeLYn5yqyaSo9xBta3FPkB")
 EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER", "arnabjana078@gmail.com")
@@ -35,11 +24,9 @@ EMAIL_ENABLED  = os.environ.get("EMAIL_ENABLED",  "true").lower() == "true"
 
 # ══════════════════════════════════════════════════════════════
 
-
 # ── Block by device name ──────────────────────────────────────
 blocked_devices: set = set()
 clients: list = []
-
 
 # ── File helpers ──────────────────────────────────────────────
 
@@ -131,13 +118,13 @@ Action : {action}
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = f"[{severity}] Security Alert — {device} | {file}"
-        msg["From"]    = EMAIL_SENDER
+        msg["From"]    = "SOC Alert <onboarding@resend.dev>"
         msg["To"]      = EMAIL_RECEIVER
         msg.attach(MIMEText(plain, "plain"))
         msg.attach(MIMEText(html,  "html"))
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
+            server.login("SOC Alert <onboarding@resend.dev>"_DUMMY)
+            server.sendmail("SOC Alert <onboarding@resend.dev>", EMAIL_RECEIVER, msg.as_string())
         print(f"[EMAIL] ✅ Alert sent to {EMAIL_RECEIVER}")
     except smtplib.SMTPAuthenticationError:
         print("[EMAIL] ❌ Authentication failed — check App Password")

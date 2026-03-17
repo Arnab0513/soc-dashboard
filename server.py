@@ -25,7 +25,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "nexus-soc-2026-secret")
 # ══════════════════════════════════════════════════════════════
 #  CONFIG
 # ══════════════════════════════════════════════════════════════
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Arnab@2026")  
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "*******")  #set your own password
 
 EMAIL_SENDER   = "sender123@gmail.com" #sender email address
 EMAIL_PASSWORD = "aaaa bbbb cccc dddd" #give the unique password
